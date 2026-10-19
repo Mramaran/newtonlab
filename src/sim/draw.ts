@@ -1,5 +1,9 @@
+import { COLLISION_DURATION } from '../physics/collision'
 import { inclinePosition, solveIncline } from '../physics/incline'
 import { projectilePosition, solveProjectile } from '../physics/projectile'
+import { solvePulley } from '../physics/pulley'
+import { solveSpring } from '../physics/spring'
+import { drawCollision, drawPulley, drawSpring } from './drawMore'
 import { fmt } from '../physics/solution'
 import type { InclineSpec, ProjectileSpec, SupportedSpec } from '../physics/spec'
 
@@ -53,9 +57,9 @@ export function readPalette(): Palette {
   return out
 }
 
-const FONT = '500 13px "JetBrains Mono", ui-monospace, monospace'
-const SMALL_FONT = '500 11px "JetBrains Mono", ui-monospace, monospace'
-const LABEL_FONT = '700 14px "Atkinson Hyperlegible", system-ui, sans-serif'
+export const FONT = '500 13px "JetBrains Mono", ui-monospace, monospace'
+export const SMALL_FONT = '500 11px "JetBrains Mono", ui-monospace, monospace'
+export const LABEL_FONT = '700 14px "Atkinson Hyperlegible", system-ui, sans-serif'
 
 export interface DrawOptions {
   /** simulation time, s */
@@ -74,7 +78,18 @@ export interface DrawOptions {
 
 /** Real-world duration of the motion, s. */
 export function motionDuration(spec: SupportedSpec): number {
-  return spec.type === 'projectile' ? solveProjectile(spec).timeOfFlight : solveIncline(spec).duration
+  switch (spec.type) {
+    case 'projectile':
+      return solveProjectile(spec).timeOfFlight
+    case 'incline':
+      return solveIncline(spec).duration
+    case 'pulley':
+      return solvePulley(spec).duration
+    case 'collision':
+      return COLLISION_DURATION
+    case 'spring':
+      return solveSpring(spec).duration
+  }
 }
 
 /** Time between strobe dots: a round number giving roughly a dozen dots over the motion. */
@@ -89,18 +104,28 @@ export function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, s
   ctx.clearRect(0, 0, w, h)
   ctx.fillStyle = c.bg
   ctx.fillRect(0, 0, w, h)
-  if (spec.type === 'projectile') drawProjectile(ctx, w, h, spec, o, c)
-  else drawIncline(ctx, w, h, spec, o, c)
+  switch (spec.type) {
+    case 'projectile':
+      return drawProjectile(ctx, w, h, spec, o, c)
+    case 'incline':
+      return drawIncline(ctx, w, h, spec, o, c)
+    case 'pulley':
+      return drawPulley(ctx, w, h, spec, o, c)
+    case 'collision':
+      return drawCollision(ctx, w, h, spec, o, c)
+    case 'spring':
+      return drawSpring(ctx, w, h, spec, o, c)
+  }
 }
 
-function niceStep(span: number): number {
+export function niceStep(span: number): number {
   const raw = span / 8
   const pow = 10 ** Math.floor(Math.log10(raw))
   const n = raw / pow
   return (n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10) * pow
 }
 
-function arrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color: string, label?: string, dashed = false) {
+export function arrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color: string, label?: string, dashed = false) {
   const len = Math.hypot(x2 - x1, y2 - y1)
   if (len < 4) return
   const ang = Math.atan2(y2 - y1, x2 - x1)
@@ -125,7 +150,7 @@ function arrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number
   }
 }
 
-function pill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string) {
+export function pill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string) {
   ctx.font = LABEL_FONT
   const tw = ctx.measureText(text).width
   const pw = tw + 16
@@ -139,7 +164,7 @@ function pill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
 }
 
 /** Live values at the top of the canvas; split over two lines on narrow screens. */
-function readout(ctx: CanvasRenderingContext2D, x: number, parts: string[], c: Palette, compact?: boolean) {
+export function readout(ctx: CanvasRenderingContext2D, x: number, parts: string[], c: Palette, compact?: boolean) {
   ctx.fillStyle = c.muted
   if (compact) {
     ctx.font = SMALL_FONT

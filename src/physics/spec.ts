@@ -1,8 +1,29 @@
+import type { CollisionParams } from './collision'
 import type { InclineParams } from './incline'
 import type { ProjectileParams } from './projectile'
+import type { PulleyParams, PulleySetup } from './pulley'
+import type { SpringParams } from './spring'
 
 export type ProjectileUnknown = 'range' | 'timeOfFlight' | 'maxHeight' | 'impactSpeed'
 export type InclineUnknown = 'finalSpeed' | 'timeToBottom' | 'acceleration'
+export type PulleyUnknown = 'acceleration' | 'tension' | 'time' | 'speed'
+export type CollisionUnknown = 'v1' | 'v2' | 'keLoss'
+export type SpringUnknown = 'period' | 'frequency' | 'maxSpeed' | 'maxAcceleration' | 'energy'
+
+export interface PulleySpec extends PulleyParams {
+  type: 'pulley'
+  unknown: PulleyUnknown
+}
+
+export interface CollisionSpec extends CollisionParams {
+  type: 'collision'
+  unknown: CollisionUnknown
+}
+
+export interface SpringSpec extends SpringParams {
+  type: 'spring'
+  unknown: SpringUnknown
+}
 
 export interface ProjectileSpec extends ProjectileParams {
   type: 'projectile'
@@ -19,13 +40,19 @@ export interface UnsupportedSpec {
   reason: string
 }
 
-export type ProblemSpec = ProjectileSpec | InclineSpec | UnsupportedSpec
-export type SupportedSpec = ProjectileSpec | InclineSpec
+export type SupportedSpec = ProjectileSpec | InclineSpec | PulleySpec | CollisionSpec | SpringSpec
+export type ProblemSpec = SupportedSpec | UnsupportedSpec
 
 export type ValidationResult = { ok: true; spec: ProblemSpec } | { ok: false; error: string }
 
 const PROJECTILE_UNKNOWNS: ProjectileUnknown[] = ['range', 'timeOfFlight', 'maxHeight', 'impactSpeed']
 const INCLINE_UNKNOWNS: InclineUnknown[] = ['finalSpeed', 'timeToBottom', 'acceleration']
+const PULLEY_UNKNOWNS: PulleyUnknown[] = ['acceleration', 'tension', 'time', 'speed']
+const COLLISION_UNKNOWNS: CollisionUnknown[] = ['v1', 'v2', 'keLoss']
+const SPRING_UNKNOWNS: SpringUnknown[] = ['period', 'frequency', 'maxSpeed', 'maxAcceleration', 'energy']
+
+const pick = <T extends string>(value: unknown, allowed: T[], fallback: T): T =>
+  allowed.includes(value as T) ? (value as T) : fallback
 
 /** Limits keep slider ranges sane and catch values the parser got badly wrong. */
 export const LIMITS = {
@@ -38,6 +65,12 @@ export const LIMITS = {
   length: [0.1, 500],
   mass: [0.01, 1000],
   initialSpeed: [0, 100],
+  distance: [0.01, 100],
+  // Wide enough for bullet problems (hundreds of m/s)
+  velocity: [-1000, 1000],
+  restitution: [0, 1],
+  springK: [0.1, 100000],
+  amplitude: [0.001, 10],
 } as const
 
 type Raw = Record<string, unknown>
@@ -102,6 +135,52 @@ export function validateSpec(input: unknown): ValidationResult {
       ? (raw.unknown as InclineUnknown)
       : 'finalSpeed'
     return { ok: true, spec: { type: 'incline', angleDeg, mu, length, mass, initialSpeed, g, unknown } }
+  }
+
+  if (raw.type === 'pulley') {
+    const setup: PulleySetup = raw.setup === 'table' ? 'table' : 'atwood'
+    const m1 = num(raw, 'm1')
+    const m2 = num(raw, 'm2')
+    const mu = setup === 'table' ? num(raw, 'mu', 0)! : 0
+    const distance = num(raw, 'distance', 1)!
+    if (m1 === undefined || m2 === undefined) return { ok: false, error: 'Missing one of the two masses' }
+    const err =
+      inRange('Mass 1', m1, LIMITS.mass) ??
+      inRange('Mass 2', m2, LIMITS.mass) ??
+      inRange('Friction', mu, LIMITS.mu) ??
+      inRange('Distance', distance, LIMITS.distance) ??
+      inRange('g', g, LIMITS.g)
+    if (err) return { ok: false, error: err }
+    return { ok: true, spec: { type: 'pulley', setup, m1, m2, mu, distance, g, unknown: pick(raw.unknown, PULLEY_UNKNOWNS, 'acceleration') } }
+  }
+
+  if (raw.type === 'collision') {
+    const m1 = num(raw, 'm1')
+    const m2 = num(raw, 'm2')
+    const u1 = num(raw, 'u1')
+    const u2 = num(raw, 'u2', 0)!
+    const e = num(raw, 'e', 1)!
+    if (m1 === undefined || m2 === undefined) return { ok: false, error: 'Missing one of the two masses' }
+    if (u1 === undefined) return { ok: false, error: 'Missing the first body’s speed' }
+    const err =
+      inRange('Mass 1', m1, LIMITS.mass) ??
+      inRange('Mass 2', m2, LIMITS.mass) ??
+      inRange('Velocity 1', u1, LIMITS.velocity) ??
+      inRange('Velocity 2', u2, LIMITS.velocity) ??
+      inRange('Coefficient of restitution', e, LIMITS.restitution)
+    if (err) return { ok: false, error: err }
+    return { ok: true, spec: { type: 'collision', m1, u1, m2, u2, e, unknown: pick(raw.unknown, COLLISION_UNKNOWNS, 'v2') } }
+  }
+
+  if (raw.type === 'spring') {
+    const m = num(raw, 'm')
+    const k = num(raw, 'k')
+    const A = num(raw, 'A', 0.1)!
+    if (m === undefined) return { ok: false, error: 'Missing the mass' }
+    if (k === undefined) return { ok: false, error: 'Missing the spring constant' }
+    const err = inRange('Mass', m, LIMITS.mass) ?? inRange('Spring constant', k, LIMITS.springK) ?? inRange('Amplitude', A, LIMITS.amplitude)
+    if (err) return { ok: false, error: err }
+    return { ok: true, spec: { type: 'spring', m, k, A, unknown: pick(raw.unknown, SPRING_UNKNOWNS, 'period') } }
   }
 
   return { ok: false, error: `Unknown problem type: ${String(raw.type)}` }

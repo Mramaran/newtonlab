@@ -29,6 +29,20 @@ describe('validateSpec', () => {
     expect(r).toEqual({ ok: true, spec: { type: 'unsupported', reason: 'Pulley systems are not supported yet.' } })
   })
 
+  it('accepts the new problem types and fills defaults', () => {
+    expect(validateSpec({ type: 'pulley', m1: 3, m2: 5 })).toEqual({
+      ok: true,
+      spec: { type: 'pulley', setup: 'atwood', m1: 3, m2: 5, mu: 0, distance: 1, g: 9.8, unknown: 'acceleration' },
+    })
+    // A bullet: 10 g at 400 m/s into a 2 kg block
+    expect(validateSpec({ type: 'collision', m1: 0.01, u1: 400, m2: 2, e: 0, unknown: 'v2' })).toEqual({
+      ok: true,
+      spec: { type: 'collision', m1: 0.01, u1: 400, m2: 2, u2: 0, e: 0, unknown: 'v2' },
+    })
+    expect(validateSpec({ type: 'spring', m: 2, k: 800 })).toEqual({ ok: true, spec: { type: 'spring', m: 2, k: 800, A: 0.1, unknown: 'period' } })
+    expect(validateSpec({ type: 'collision', m1: 1, u1: 2, m2: 1, e: 1.5 }).ok).toBe(false)
+  })
+
   it('rejects missing or out-of-range values', () => {
     expect(validateSpec({ type: 'projectile', angleDeg: 30 }).ok).toBe(false)
     expect(validateSpec({ type: 'projectile', speed: 20, angleDeg: 120 }).ok).toBe(false)

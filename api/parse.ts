@@ -11,7 +11,7 @@ const DEFAULT_FALLBACK_MODEL = 'gemini-flash-latest'
 
 export const SYSTEM_PROMPT = `You convert a high school physics word problem into JSON parameters for a simulator.
 
-Set "type", then fill EVERY field of the matching object ("projectile" or "incline") and set the other object to null.
+Set "type", then fill EVERY field of the matching object and set all the other objects to null.
 
 1. "projectile": an object launched, thrown, kicked, fired or dropped, moving under gravity only (no air resistance).
    - speed: launch speed in m/s (dropped from rest = 0)
@@ -25,22 +25,55 @@ Set "type", then fill EVERY field of the matching object ("projectile" or "incli
    - mass: kg (1 if not given)
    - initialSpeed: speed down the slope at the start in m/s (0 if released or starting from rest)
    - unknown: "finalSpeed", "timeToBottom", or "acceleration"
+3. "pulley": masses joined by a light string over a pulley.
+   - setup: "atwood" if both masses hang on either side of the pulley; "table" if one block (m1) is on a horizontal table and the other (m2) hangs over the edge
+   - m1: atwood: the first (left) mass; table: the mass on the table (kg)
+   - m2: atwood: the second (right) mass; table: the hanging mass (kg)
+   - mu: coefficient of kinetic friction between the table and m1 (0 for atwood, or if the table is smooth)
+   - distance: how far the masses move in m, if the question asks for a time or speed after some distance (1 if not given)
+   - unknown: "acceleration", "tension", "time", or "speed"
+4. "collision": two bodies colliding head-on in a straight line.
+   - m1, u1: mass (kg) and initial velocity (m/s) of the first body, taking its direction of motion as positive
+   - m2, u2: mass and initial velocity of the second body; u2 is NEGATIVE if it moves towards the first body, 0 if at rest
+   - e: coefficient of restitution: 1 for perfectly elastic, 0 if they stick together (perfectly inelastic), otherwise the stated value
+   - unknown: "v1" (first body's velocity after), "v2" (second body's velocity after, or their common velocity if they stick), or "keLoss"
+5. "spring": a mass oscillating on a spring (simple harmonic motion).
+   - m: mass in kg
+   - k: spring constant (force constant) in N/m
+   - A: amplitude in m (how far it is pulled or compressed from equilibrium; 0.1 if not given)
+   - unknown: "period", "frequency", "maxSpeed", "maxAcceleration", or "energy"
 
 Rules:
 - Convert every value to SI units (km/h to m/s by dividing by 3.6, cm to m, grams to kg).
+- If the question asks for several quantities (for example "find the acceleration and the tension"), set unknown to the
+  first one asked. That is still a supported problem; the app shows the working for all of them.
 - Set g only if the problem states a value (for example "take g = 10 m/s²"); otherwise null.
-- If the problem is anything else (pulleys, springs, circuits, collisions, pendulums, motion up a slope, air resistance,
-  or anything you cannot map with confidence), use type "unsupported", both objects null, and a one-sentence "reason" for a student.
+- If the problem is anything else (pendulums, circuits, optics, rotation, motion up a slope, air resistance, 2D collisions,
+  pulleys with more than two masses, or anything you cannot map with confidence), use type "unsupported", all objects null,
+  and a one-sentence "reason" for a student.
 - Never invent values that are not stated or clearly implied.`
 
 const PROJECTILE_FIELDS = ['speed', 'angleDeg', 'height', 'unknown']
 const INCLINE_FIELDS = ['angleDeg', 'mu', 'length', 'mass', 'initialSpeed', 'unknown']
+const PULLEY_FIELDS = ['setup', 'm1', 'm2', 'mu', 'distance', 'unknown']
+const COLLISION_FIELDS = ['m1', 'u1', 'm2', 'u2', 'e', 'unknown']
+const SPRING_FIELDS = ['m', 'k', 'A', 'unknown']
+const TYPES = ['projectile', 'incline', 'pulley', 'collision', 'spring'] as const
+
+const numbers = (keys: string[]) => Object.fromEntries(keys.map((k) => [k, { type: 'NUMBER' }]))
+const nested = (fields: string[], extra: Record<string, unknown>) => ({
+  type: 'OBJECT',
+  nullable: true,
+  properties: { ...numbers(fields.filter((f) => !(f in extra))), ...extra },
+  required: fields,
+  propertyOrdering: fields,
+})
 
 // Nested objects with required fields stop the model from silently leaving values out.
 export const RESPONSE_SCHEMA = {
   type: 'OBJECT',
   properties: {
-    type: { type: 'STRING', enum: ['projectile', 'incline', 'unsupported'] },
+    type: { type: 'STRING', enum: [...TYPES, 'unsupported'] },
     projectile: {
       type: 'OBJECT',
       nullable: true,
@@ -67,19 +100,25 @@ export const RESPONSE_SCHEMA = {
       required: INCLINE_FIELDS,
       propertyOrdering: INCLINE_FIELDS,
     },
+    pulley: nested(PULLEY_FIELDS, {
+      setup: { type: 'STRING', enum: ['atwood', 'table'] },
+      unknown: { type: 'STRING', enum: ['acceleration', 'tension', 'time', 'speed'] },
+    }),
+    collision: nested(COLLISION_FIELDS, { unknown: { type: 'STRING', enum: ['v1', 'v2', 'keLoss'] } }),
+    spring: nested(SPRING_FIELDS, { unknown: { type: 'STRING', enum: ['period', 'frequency', 'maxSpeed', 'maxAcceleration', 'energy'] } }),
     g: { type: 'NUMBER', nullable: true },
     reason: { type: 'STRING', nullable: true },
   },
   required: ['type'],
-  propertyOrdering: ['type', 'projectile', 'incline', 'g', 'reason'],
+  propertyOrdering: ['type', ...TYPES, 'g', 'reason'],
 }
 
 type Raw = Record<string, unknown>
 
 /** Flattens the model's nested reply into the shape the client validator expects, dropping nulls. */
 export function flattenReply(parsed: Raw): Raw {
-  const nested = parsed.type === 'projectile' || parsed.type === 'incline' ? (parsed[parsed.type] as Raw | null) : null
-  const flat: Raw = { type: parsed.type, ...(nested ?? {}), g: parsed.g, reason: parsed.reason }
+  const inner = TYPES.includes(parsed.type as (typeof TYPES)[number]) ? (parsed[parsed.type as string] as Raw | null) : null
+  const flat: Raw = { type: parsed.type, ...(inner ?? {}), g: parsed.g, reason: parsed.reason }
   return Object.fromEntries(Object.entries(flat).filter(([, v]) => v !== null && v !== undefined))
 }
 

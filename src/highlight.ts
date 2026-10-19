@@ -10,6 +10,15 @@ export const FIELD_COLORS: Record<string, string> = {
   g: 'var(--f-g)',
   mu: 'var(--f-mu)',
   mass: 'var(--f-mass)',
+  m: 'var(--f-mass)',
+  m1: 'var(--f-angle)',
+  m2: 'var(--f-g)',
+  u1: 'var(--f-speed)',
+  u2: 'var(--f-height)',
+  e: 'var(--f-mu)',
+  k: 'var(--f-angle)',
+  A: 'var(--f-height)',
+  distance: 'var(--f-height)',
 }
 
 export interface Segment {
@@ -18,10 +27,11 @@ export interface Segment {
   field?: string
 }
 
-type Kind = 'speed' | 'accel' | 'angle' | 'mass' | 'length' | 'none'
+type Kind = 'speed' | 'accel' | 'angle' | 'mass' | 'length' | 'stiffness' | 'none'
 
 // Longest units first so "m/s²" wins over "m/s" and "m".
 const UNITS: [string, Kind, number][] = [
+  ['N/m', 'stiffness', 1],
   ['m/s²', 'accel', 1],
   ['m/s^2', 'accel', 1],
   ['m/s2', 'accel', 1],
@@ -40,12 +50,13 @@ const UNITS: [string, Kind, number][] = [
 ]
 
 const FIELDS_BY_KIND: Record<Kind, string[]> = {
-  speed: ['speed', 'initialSpeed'],
+  speed: ['speed', 'initialSpeed', 'u1', 'u2'],
   accel: ['g'],
   angle: ['angleDeg'],
-  mass: ['mass'],
-  length: ['height', 'length'],
-  none: ['mu', 'g', 'speed', 'angleDeg', 'height', 'length', 'mass', 'initialSpeed'],
+  mass: ['mass', 'm', 'm1', 'm2'],
+  length: ['height', 'length', 'distance', 'A'],
+  stiffness: ['k'],
+  none: ['mu', 'e', 'g', 'speed', 'angleDeg', 'height', 'length', 'mass', 'initialSpeed'],
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
@@ -53,7 +64,8 @@ const UNIT_PATTERN = UNITS.map(([u]) => escape(u)).join('|')
 // A number, optionally followed by a unit that is not the start of a longer word ("10 m high" but not "10 minutes").
 const TOKEN = new RegExp(`(\\d+(?:\\.\\d+)?)(\\s*(?:${UNIT_PATTERN})(?![A-Za-z]))?`, 'gi')
 
-const close = (a: number, b: number) => Math.abs(a - b) <= 1e-6 + 0.01 * Math.abs(b)
+// Compare sizes: "2 m/s towards it" in the text is stored as a velocity of −2.
+const close = (a: number, b: number) => Math.abs(Math.abs(a) - Math.abs(b)) <= 1e-6 + 0.01 * Math.abs(b)
 
 /** Splits the problem text so each number that was read into a parameter can be coloured to match its slider. */
 export function highlightProblem(text: string, spec: SupportedSpec): Segment[] {

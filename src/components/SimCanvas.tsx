@@ -177,7 +177,7 @@ export function SimCanvas({ spec, ghost, playId, instant, showMarkers, paused, o
           </label>
         )}
       </div>
-      {step > 0 && (
+      {step > 0 && (spec.type === 'projectile' || spec.type === 'incline') && (
         <p className="sim-caption">
           Dots every {fmt(step)} s{spec.type === 'projectile' ? ': closer together where the ball is slower' : ': further apart as the block speeds up'}.
         </p>

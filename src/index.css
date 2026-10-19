@@ -496,6 +496,18 @@ h2 {
   color: var(--good);
 }
 
+.example-kind.pulley {
+  color: var(--f-g);
+}
+
+.example-kind.collision {
+  color: var(--accent-ink);
+}
+
+.example-kind.spring {
+  color: var(--f-mu);
+}
+
 .example-kind.unsupported {
   color: var(--muted);
 }

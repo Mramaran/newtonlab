@@ -1,4 +1,4 @@
-import { fieldsFor, INCLINE_UNKNOWN_OPTIONS, PROJECTILE_UNKNOWN_OPTIONS } from '../fields'
+import { fieldsFor, TYPE_NAMES, UNKNOWN_OPTIONS } from '../fields'
 import { FIELD_COLORS } from '../highlight'
 import type { SupportedSpec } from '../physics/spec'
 
@@ -22,7 +22,20 @@ export function ParamsPanel({ spec, onChange, disabled }: Props) {
   return (
     <div className="params">
       <div className="params-type">
-        <span className="badge">{spec.type === 'projectile' ? 'Projectile motion' : 'Inclined plane'}</span>
+        <span className="badge">{TYPE_NAMES[spec.type]}</span>
+        {spec.type === 'pulley' && (
+          <label className="unknown">
+            Setup
+            <select
+              value={spec.setup}
+              disabled={disabled}
+              onChange={(e) => onChange({ ...spec, setup: e.target.value === 'table' ? 'table' : 'atwood' })}
+            >
+              <option value="atwood">Two hanging masses (Atwood)</option>
+              <option value="table">Block on a table + hanging mass</option>
+            </select>
+          </label>
+        )}
         <label className="unknown">
           Find
           <select
@@ -30,7 +43,7 @@ export function ParamsPanel({ spec, onChange, disabled }: Props) {
             disabled={disabled}
             onChange={(e) => onChange({ ...spec, unknown: e.target.value } as SupportedSpec)}
           >
-            {(spec.type === 'projectile' ? PROJECTILE_UNKNOWN_OPTIONS : INCLINE_UNKNOWN_OPTIONS).map((o) => (
+            {UNKNOWN_OPTIONS[spec.type].map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>

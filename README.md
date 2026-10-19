@@ -14,7 +14,7 @@ Students solve mechanics problems by plugging numbers into memorised formulas wi
 
 1. **Read the problem.** The text goes to a small serverless function (`api/parse.ts`, wrapped for Cloudflare in `functions/api/parse.ts`) that asks Gemini to extract the problem type and values as strict JSON. The API key stays on the server.
 2. **Check what was understood.** The values are validated (`src/physics/spec.ts`) and shown on an editable "Here's what I understood" card. Anything outside the supported types gets a clear "not supported yet" message instead of a wrong simulation.
-3. **Simulate with real physics.** The motion is computed with closed-form equations (`src/physics/projectile.ts`, `src/physics/incline.ts`), not a game engine, so the numbers match the textbook. The canvas renderer (`src/sim/draw.ts`) animates it.
+3. **Simulate with real physics.** The motion is computed with closed-form equations (`src/physics/projectile.ts`, `incline.ts`, `pulley.ts`, `collision.ts`, `spring.ts`), not a game engine, so the numbers match the textbook. The canvas renderer (`src/sim/draw.ts`, `drawMore.ts`) animates it.
 4. **Explain.** The worked solution (`src/physics/solution.ts`) is rendered with KaTeX, step by step, using the student's own numbers.
 
 The AI only turns words into numbers. Everything you see moving is computed by the app.
@@ -25,8 +25,13 @@ The AI only turns words into numbers. Everything you see moving is computed by t
 |---|---|---|
 | Projectile motion | launch speed, angle, launch height, g | range, time of flight, maximum height, landing speed |
 | Inclined plane | slope angle, friction μ, length, starting speed, mass, g | speed at the bottom, time to the bottom, acceleration |
+| Pulley (Atwood, or block on a table) | two masses, friction μ (table), distance, g | acceleration, tension, time, speed |
+| 1D collision | two masses and velocities, coefficient of restitution e | final velocities, kinetic energy lost |
+| Spring–mass SHM | mass, spring constant k, amplitude | period, frequency, maximum speed and acceleration, energy |
 
-It also handles edge cases: launches from a height (where the best angle is *not* 45°, and the app shows the real optimum), blocks that friction holds still, and pushed blocks that stop partway down.
+It also handles edge cases: launches from a height (where the best angle is *not* 45°, and the app shows the real optimum), blocks that friction holds still, pushed blocks that stop partway down, equal Atwood masses that balance, table friction that stops the system, bodies that never meet, and questions that ask for two quantities at once.
+
+The example problems are original, written in the style of Class 11 NCERT/CBSE questions.
 
 ## Run it locally
 
@@ -46,7 +51,7 @@ Open http://localhost:5173. The example problems work without an API key because
 npm test
 ```
 
-46 unit tests cover the physics against textbook answers (e.g. 20 m/s at 35° → 38.4 m range), the validator, every example problem, the problem-text highlighter, and the parser's error handling (with a fake fetch, so no API calls).
+75 unit tests cover the physics against textbook answers (e.g. 20 m/s at 35° → 38.4 m range), the validator, every example problem, the problem-text highlighter, and the parser's error handling (with a fake fetch, so no API calls).
 
 ## Deploy
 

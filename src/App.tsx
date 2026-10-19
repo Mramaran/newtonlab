@@ -103,13 +103,13 @@ export default function App() {
       <div className="page">
         <Header />
         <main className="home">
-          <span className="eyebrow">For high-school physics · projectiles and slopes</span>
+          <span className="eyebrow">For Class 11–12 mechanics · projectiles, slopes, pulleys, collisions, springs</span>
           <h1>
             Turn any physics problem into a <em>simulation you can <span className="scribble">play with.</span></em>
           </h1>
           <p className="lede">
-            Paste a projectile or inclined-plane question from your textbook. NewtonLab reads it, builds the exact scenario, and shows the
-            physics working step by step.
+            Paste a mechanics question from your textbook: a projectile, a slope, a pulley, a collision or a spring. NewtonLab reads it,
+            builds the exact scenario, and shows the physics working step by step.
           </p>
           <form
             className="ask"
@@ -232,13 +232,7 @@ export default function App() {
                   Reset to the original problem
                 </button>
               )}
-              <span className="legend">
-                {spec.type === 'projectile'
-                  ? revealed && JSON.stringify(original) !== JSON.stringify(spec)
-                    ? 'Dashed grey = the original problem'
-                    : ''
-                  : 'Arrows: weight (mg), normal (N), friction (f)'}
-              </span>
+              <span className="legend">{legendFor(spec, revealed && JSON.stringify(original) !== JSON.stringify(spec))}</span>
             </div>
             <SolutionPanel
               spec={spec}
@@ -281,6 +275,40 @@ function ExampleKind({ type }: { type: ProblemSpec['type'] }) {
         Inclined plane
       </span>
     )
+  if (type === 'pulley')
+    return (
+      <span className="example-kind pulley">
+        <svg {...common}>
+          <circle cx="12" cy="6" r="3.5" />
+          <path d="M8.5 6v8M15.5 6v5" />
+          <rect x="6" y="14" width="5" height="5" fill="currentColor" stroke="none" />
+          <rect x="13" y="11" width="5" height="5" fill="currentColor" stroke="none" />
+        </svg>
+        Pulley
+      </span>
+    )
+  if (type === 'collision')
+    return (
+      <span className="example-kind collision">
+        <svg {...common}>
+          <path d="M2 19h20" />
+          <rect x="4" y="11" width="7" height="7" fill="currentColor" stroke="none" />
+          <rect x="13" y="12" width="6" height="6" />
+          <path d="M12 5v3M9.5 6.5l1 1.5M14.5 6.5l-1 1.5" />
+        </svg>
+        Collision
+      </span>
+    )
+  if (type === 'spring')
+    return (
+      <span className="example-kind spring">
+        <svg {...common} strokeLinejoin="round">
+          <path d="M3 6v13M3 13h2l1.5-3 2 6 2-6 2 6 1.5-3h1" />
+          <rect x="15.5" y="9.5" width="6" height="7" fill="currentColor" stroke="none" />
+        </svg>
+        Spring
+      </span>
+    )
   return (
     <span className="example-kind unsupported">
       <svg {...common}>
@@ -290,6 +318,22 @@ function ExampleKind({ type }: { type: ProblemSpec['type'] }) {
       Not supported yet
     </span>
   )
+}
+
+/** One line under the simulation explaining what the drawing shows. */
+function legendFor(spec: SupportedSpec, changed: boolean): string {
+  switch (spec.type) {
+    case 'projectile':
+      return changed ? 'Dashed grey = the original problem' : ''
+    case 'incline':
+      return 'Arrows: weight (mg), normal (N), friction (f)'
+    case 'pulley':
+      return spec.setup === 'table' ? 'Arrows: tension (T), friction (f), weight (mg)' : 'Arrows: tension (T) up, weight (mg) down'
+    case 'collision':
+      return 'Arrows show each body’s velocity before and after'
+    case 'spring':
+      return 'Bars: kinetic (KE) and potential (PE) energy, which always add up to the same total'
+  }
 }
 
 const fieldLabel =(spec: SupportedSpec, key: string) => fieldsFor(spec).find((f) => f.key === key)?.label
