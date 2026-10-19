@@ -298,9 +298,13 @@ function Header({ onHome }: { onHome?: () => void }) {
   return (
     <header className="header">
       <button className="brand" onClick={onHome} disabled={!onHome} aria-label="NewtonLab home">
-        <svg className="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
-          <path d="M4 26 Q 14 2 28 26" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="2 5" />
-          <circle cx="21" cy="12" r="4" />
+        {/* A falling apple, drawn like a notebook sketch */}
+        <svg className="brand-mark" viewBox="0 0 32 32" width="32" height="32" fill="none" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path className="motion" d="M9.2 2.8 9.4 7.6M12.6 1.8l.1 3.6" strokeWidth="1.5" />
+          <path className="apple" d="M16 13.4c-3-2-8.4-1-8.3 5.1.1 5.7 3.9 10 6.7 9.6.9-.1 1.3-.6 1.7-.6.4 0 .9.5 1.8.6 2.8.3 6.6-4 6.6-9.6 0-6-5.4-7.1-8.5-5.1Z" strokeWidth="1.6" />
+          <path className="shine" d="M11.1 17.2c.3-1.4 1.2-2.2 2.2-2.4" strokeWidth="1.3" />
+          <path d="M16 13.5c.2-2.1.8-3.6 2-4.8" stroke="currentColor" strokeWidth="1.6" />
+          <path className="leaf" d="M17.3 10.3c1.4-3.2 4.7-3.6 6.3-2.8-1 2.8-4 3.8-6.3 2.8Z" strokeWidth="1.2" />
         </svg>
         NewtonLab
       </button>

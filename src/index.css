@@ -198,8 +198,35 @@ h2 {
   color: var(--ink);
 }
 
-.brand-mark circle {
+.brand-mark .apple {
   fill: var(--accent);
+  stroke: currentColor;
+}
+
+.brand-mark .leaf {
+  fill: var(--good);
+  stroke: currentColor;
+}
+
+.brand-mark .shine {
+  stroke: var(--card);
+  opacity: 0.75;
+}
+
+.brand-mark .motion {
+  stroke: var(--muted);
+}
+
+/* The apple drops a little when you hover the logo */
+.brand-mark .apple,
+.brand-mark .leaf,
+.brand-mark .shine,
+.brand-mark path:not(.motion) {
+  transition: transform 0.25s cubic-bezier(0.5, 0, 0.75, 0);
+}
+
+.brand:hover:not(:disabled) .brand-mark path:not(.motion) {
+  transform: translateY(1.5px);
 }
 
 /* Buttons */
