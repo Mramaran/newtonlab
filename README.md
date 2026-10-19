@@ -6,6 +6,8 @@ Paste a Class 11–12 mechanics question from your textbook: a projectile, a slo
 
 Built for EurekaDev 2026 (Coding track, Math & Physics).
 
+Live demo: https://newtonlab.mrmaran.workers.dev · Demo video: https://youtu.be/JUS3Ko8qBEk
+
 ## Why
 
 Students solve mechanics problems by plugging numbers into memorised formulas without ever seeing the motion. Textbooks have static diagrams, solver apps give a final number, and ready-made simulations don't match the problem in front of you. NewtonLab builds the simulation from *your* problem and checks it against *your* textbook answer.
