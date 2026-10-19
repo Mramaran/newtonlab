@@ -1,0 +1,15 @@
+// Cloudflare Workers config. Build with `npm run build`, deploy with `npx wrangler deploy`.
+// Add GEMINI_API_KEY as a secret in the Worker's Settings → Variables and Secrets (never in this file).
+{
+  "name": "newtonlab",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // Send API calls to the Worker before the asset/SPA fallback can answer them.
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": { "enabled": true }
+}

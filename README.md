@@ -50,6 +50,15 @@ npm test
 
 ## Deploy
 
+### Cloudflare Workers (the dashboard's default for a GitHub import)
+
+`wrangler.jsonc` deploys the built site as static assets, with `worker/index.ts` handling `/api/parse`.
+
+1. **Workers & Pages → Create → Import a repository**, pick this repo.
+2. Build command `npm run build`, deploy command `npx wrangler deploy`.
+3. In the Worker's **Settings → Variables and Secrets**, add `GEMINI_API_KEY` as a *secret*, then redeploy.
+4. The live URL is `https://newtonlab.<your-subdomain>.workers.dev`, shown on the Worker's overview page under **Domains & Routes**. If no URL appears, turn on the `workers.dev` route there.
+
 ### Cloudflare Pages
 
 `functions/api/parse.ts` is a Pages Function that wraps the same parser, so `/api/parse` works on Cloudflare with no extra setup.
