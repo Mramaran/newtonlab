@@ -137,7 +137,18 @@ export async function parseProblem(text: unknown, opts: ParseOptions): Promise<P
   }
 
   if (response.status === 429) return { ok: false, status: 429, error: 'The AI parser is busy right now. Wait a moment or try an example problem.' }
-  if (!response.ok) return { ok: false, status: 502, error: `The AI parser returned an error (${response.status}).` }
+  if (!response.ok) {
+    // Google's error body names the cause (bad key, unsupported region, bad request) and never contains the key.
+    const detail = await response
+      .json()
+      .then((body: unknown) => {
+        const e = (body as { error?: { status?: string; message?: string } }).error
+        return `${e?.status ?? ''} ${e?.message ?? ''}`.trim()
+      })
+      .catch(() => '')
+    console.error(`Gemini ${response.status}: ${detail}`)
+    return { ok: false, status: 502, error: `The AI parser returned an error (${response.status})${detail ? `: ${detail.slice(0, 200)}` : '.'}` }
+  }
 
   try {
     const data = (await response.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
