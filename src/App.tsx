@@ -3,6 +3,7 @@ import { ParamsPanel } from './components/ParamsPanel'
 import { PredictPanel } from './components/PredictPanel'
 import { SimCanvas } from './components/SimCanvas'
 import { SolutionPanel } from './components/SolutionPanel'
+import { ThemeToggle } from './components/ThemeToggle'
 import { EXAMPLES, type Example } from './examples'
 import { fieldsFor } from './fields'
 import { FIELD_COLORS, highlightProblem } from './highlight'
@@ -267,11 +268,14 @@ function Header({ onHome }: { onHome?: () => void }) {
         </svg>
         NewtonLab
       </button>
-      {onHome && (
-        <button className="btn ghost" onClick={onHome}>
-          ← New problem
-        </button>
-      )}
+      <div className="header-actions">
+        {onHome && (
+          <button className="btn ghost" onClick={onHome}>
+            ← New problem
+          </button>
+        )}
+        <ThemeToggle />
+      </div>
     </header>
   )
 }

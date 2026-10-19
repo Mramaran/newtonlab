@@ -1,5 +1,6 @@
+/* Theme: index.html sets data-theme="light" or "dark" (saved choice, else the system setting) before first paint. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --paper: #f6f3ea;
   --dot-grid: rgba(35, 34, 30, 0.08);
   --card: #fffdf8;
@@ -53,51 +54,50 @@
   -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #14161b;
-    --dot-grid: rgba(236, 232, 221, 0.06);
-    --card: #1c1f26;
-    --input: #23272f;
-    --ink: #ece8dd;
-    --muted: #a49f92;
-    --line: #2f343d;
-    --line-soft: #272b33;
-    --accent: #ff7a50;
-    --accent-ink: #ff9b78;
-    --blue: #5cb8e0;
-    --good: #3ccf98;
-    --tint: #1d2b33;
-    --warn-bg: #2d2716;
-    --warn-line: #5a4b1d;
-    --error-bg: #2f1c17;
-    --error-line: #6b3426;
-    --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #14161b;
+  --dot-grid: rgba(236, 232, 221, 0.06);
+  --card: #1c1f26;
+  --input: #23272f;
+  --ink: #ece8dd;
+  --muted: #a49f92;
+  --line: #2f343d;
+  --line-soft: #272b33;
+  --accent: #ff7a50;
+  --accent-ink: #ff9b78;
+  --blue: #5cb8e0;
+  --good: #3ccf98;
+  --tint: #1d2b33;
+  --warn-bg: #2d2716;
+  --warn-line: #5a4b1d;
+  --error-bg: #2f1c17;
+  --error-line: #6b3426;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
 
-    --f-speed: #ff8a5c;
-    --f-angle: #6cb4ee;
-    --f-height: #69db7c;
-    --f-g: #da77f2;
-    --f-mu: #ffc078;
-    --f-mass: #b197fc;
+  --f-speed: #ff8a5c;
+  --f-angle: #6cb4ee;
+  --f-height: #69db7c;
+  --f-g: #da77f2;
+  --f-mu: #ffc078;
+  --f-mass: #b197fc;
 
-    --sim-bg: #191c22;
-    --sim-grid: #262a32;
-    --sim-axis: #7d7a72;
-    --sim-ground: #d8d3c6;
-    --sim-path: #ff7a50;
-    --sim-ghost: #6f7a86;
-    --sim-text: #ece8dd;
-    --sim-muted: #a49f92;
-    --sim-slope: #2c3038;
-    --sim-block: #3d9cc4;
-    --sim-gravity: #a594ff;
-    --sim-normal: #3ccf98;
-    --sim-friction: #ff7a50;
-    --sim-pill: #4a4740;
-    --sim-vx: #6cb4ee;
-    --sim-vy: #69db7c;
-  }
+  --sim-bg: #191c22;
+  --sim-grid: #262a32;
+  --sim-axis: #7d7a72;
+  --sim-ground: #d8d3c6;
+  --sim-path: #ff7a50;
+  --sim-ghost: #6f7a86;
+  --sim-text: #ece8dd;
+  --sim-muted: #a49f92;
+  --sim-slope: #2c3038;
+  --sim-block: #3d9cc4;
+  --sim-gravity: #a594ff;
+  --sim-normal: #3ccf98;
+  --sim-friction: #ff7a50;
+  --sim-pill: #4a4740;
+  --sim-vx: #6cb4ee;
+  --sim-vy: #69db7c;
 }
 
 * {
@@ -207,6 +207,12 @@ h2 {
 
 .btn.ghost {
   background: transparent;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn.icon {

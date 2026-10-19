@@ -51,11 +51,10 @@ export function SimCanvas({ spec, ghost, playId, instant, showMarkers, paused, o
   }, [])
 
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
-    // Re-read the CSS colours when the OS switches between light and dark.
-    const onChange = () => setPalette(readPalette())
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
+    // Re-read the CSS colours whenever the theme toggle (or the system setting) changes data-theme.
+    const mo = new MutationObserver(() => setPalette(readPalette()))
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    return () => mo.disconnect()
   }, [])
 
   const startRun = useCallback((t: number, play: boolean) => {
