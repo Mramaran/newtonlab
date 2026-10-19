@@ -1,9 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, type CSSProperties } from 'react'
 import { ParamsPanel } from './components/ParamsPanel'
 import { PredictPanel } from './components/PredictPanel'
 import { SimCanvas } from './components/SimCanvas'
 import { SolutionPanel } from './components/SolutionPanel'
 import { EXAMPLES, type Example } from './examples'
+import { fieldsFor } from './fields'
+import { FIELD_COLORS, highlightProblem } from './highlight'
 import { answerFor } from './physics/solution'
 import { validateSpec, type ProblemSpec, type SupportedSpec } from './physics/spec'
 
@@ -168,7 +170,17 @@ export default function App() {
     <div className="page">
       <Header onHome={reset} />
       <main className="workspace">
-        <blockquote className="problem">{problemText}</blockquote>
+        <blockquote className="problem">
+          {highlightProblem(problemText, original ?? spec).map((seg, i) =>
+            seg.field ? (
+              <mark key={i} className="hl" style={{ '--hl': FIELD_COLORS[seg.field] } as CSSProperties} title={fieldLabel(original ?? spec, seg.field)}>
+                {seg.text}
+              </mark>
+            ) : (
+              <span key={i}>{seg.text}</span>
+            ),
+          )}
+        </blockquote>
         <div className="grid">
           <aside className="side">
             <section className="card">
@@ -206,9 +218,6 @@ export default function App() {
               onFinished={onFinished}
             />
             <div className="toolbar">
-              <button className="btn" onClick={replay} disabled={phase === 'predict'}>
-                ↻ Replay
-              </button>
               {revealed && JSON.stringify(original) !== JSON.stringify(spec) && (
                 <button
                   className="btn ghost"
@@ -220,7 +229,13 @@ export default function App() {
                   Reset to the original problem
                 </button>
               )}
-              <span className="legend">{spec.type === 'projectile' ? 'Dashed grey = before your change' : 'Arrows: weight (mg), normal (N), friction (f)'}</span>
+              <span className="legend">
+                {spec.type === 'projectile'
+                  ? revealed && JSON.stringify(original) !== JSON.stringify(spec)
+                    ? 'Dashed grey = the original problem'
+                    : ''
+                  : 'Arrows: weight (mg), normal (N), friction (f)'}
+              </span>
             </div>
             <SolutionPanel
               spec={spec}
@@ -239,6 +254,8 @@ export default function App() {
     </div>
   )
 }
+
+const fieldLabel = (spec: SupportedSpec, key: string) => fieldsFor(spec).find((f) => f.key === key)?.label
 
 function Header({ onHome }: { onHome?: () => void }) {
   return (

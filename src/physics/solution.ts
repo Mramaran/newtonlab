@@ -50,55 +50,88 @@ export function answerFor(spec: SupportedSpec): Answer {
 
 const deg = (n: number) => `${fmt(n)}^\\circ`
 
-function projectileSteps(spec: ProjectileSpec): string[] {
+function projectileSteps(spec: ProjectileSpec): Step[] {
   const s = solveProjectile(spec)
   const { speed: v, angleDeg: a, height: h, g } = spec
-  const steps = [
-    `v_x = v\\cos\\theta = ${fmt(v)}\\cos ${deg(a)} = ${fmt(s.vx)}\\ \\text{m/s}`,
-    `v_y = v\\sin\\theta = ${fmt(v)}\\sin ${deg(a)} = ${fmt(s.vy)}\\ \\text{m/s}`,
+  const steps: Step[] = [
+    { label: 'Horizontal part of the launch velocity', tex: `v_x = v\\cos\\theta = ${fmt(v)}\\cos ${deg(a)} = ${fmt(s.vx)}\\ \\text{m/s}` },
+    { label: 'Vertical part of the launch velocity', tex: `v_y = v\\sin\\theta = ${fmt(v)}\\sin ${deg(a)} = ${fmt(s.vy)}\\ \\text{m/s}` },
   ]
-  const timeStep = `t = \\frac{v_y + \\sqrt{v_y^2 + 2gh}}{g} = \\frac{${fmt(s.vy)} + \\sqrt{${fmt(s.vy)}^2 + 2(${fmt(g)})(${fmt(h)})}}{${fmt(g)}} = ${fmt(s.timeOfFlight)}\\ \\text{s}`
+  const timeStep: Step = {
+    label: h > 0 ? 'Time in the air: when its height drops from h to 0' : 'Time in the air',
+    tex: `t = \\frac{v_y + \\sqrt{v_y^2 + 2gh}}{g} = \\frac{${fmt(s.vy)} + \\sqrt{${fmt(s.vy)}^2 + 2(${fmt(g)})(${fmt(h)})}}{${fmt(g)}} = ${fmt(s.timeOfFlight)}\\ \\text{s}`,
+  }
   switch (spec.unknown) {
     case 'range':
-      return [...steps, timeStep, `R = v_x t = ${fmt(s.vx)} \\times ${fmt(s.timeOfFlight)} = ${fmt(s.range)}\\ \\text{m}`]
+      return [
+        ...steps,
+        timeStep,
+        { label: 'Horizontal speed never changes, so range = speed × time', tex: `R = v_x t = ${fmt(s.vx)} \\times ${fmt(s.timeOfFlight)} = ${fmt(s.range)}\\ \\text{m}` },
+      ]
     case 'timeOfFlight':
       return [...steps, timeStep]
     case 'maxHeight':
-      return [...steps, `H = h + \\frac{v_y^2}{2g} = ${fmt(h)} + \\frac{${fmt(s.vy)}^2}{2(${fmt(g)})} = ${fmt(s.maxHeight)}\\ \\text{m}`]
+      return [
+        ...steps,
+        { label: 'At the top the vertical speed is zero', tex: `H = h + \\frac{v_y^2}{2g} = ${fmt(h)} + \\frac{${fmt(s.vy)}^2}{2(${fmt(g)})} = ${fmt(s.maxHeight)}\\ \\text{m}` },
+      ]
     case 'impactSpeed': {
       const vyEnd = s.vy - g * s.timeOfFlight
       return [
         ...steps,
         timeStep,
-        `v_{y,f} = v_y - gt = ${fmt(s.vy)} - ${fmt(g)}(${fmt(s.timeOfFlight)}) = ${fmt(vyEnd)}\\ \\text{m/s}`,
-        `v_f = \\sqrt{v_x^2 + v_{y,f}^2} = ${fmt(s.impactSpeed)}\\ \\text{m/s}`,
+        { label: 'Vertical speed when it lands', tex: `v_{y,f} = v_y - gt = ${fmt(s.vy)} - ${fmt(g)}(${fmt(s.timeOfFlight)}) = ${fmt(vyEnd)}\\ \\text{m/s}` },
+        { label: 'Combine both parts (Pythagoras)', tex: `v_f = \\sqrt{v_x^2 + v_{y,f}^2} = ${fmt(s.impactSpeed)}\\ \\text{m/s}` },
       ]
     }
   }
 }
 
-function inclineSteps(spec: InclineSpec): string[] {
+function inclineSteps(spec: InclineSpec): Step[] {
   const s = solveIncline(spec)
   const { angleDeg: a, mu, g, length: L, initialSpeed: v0 } = spec
   const rawA = g * (Math.sin((a * Math.PI) / 180) - mu * Math.cos((a * Math.PI) / 180))
-  const steps = [`a = g(\\sin\\theta - \\mu\\cos\\theta) = ${fmt(g)}(\\sin ${deg(a)} - ${fmt(mu)}\\cos ${deg(a)}) = ${fmt(rawA)}\\ \\text{m/s}^2`]
+  const steps: Step[] = [
+    {
+      label: mu > 0 ? 'Acceleration: gravity along the slope minus friction' : 'Acceleration: gravity along the slope',
+      tex: `a = g(\\sin\\theta - \\mu\\cos\\theta) = ${fmt(g)}(\\sin ${deg(a)} - ${fmt(mu)}\\cos ${deg(a)}) = ${fmt(rawA)}\\ \\text{m/s}^2`,
+    },
+  ]
   if (s.stopDistance === 0) {
-    return [...steps, `a \\le 0 \\text{ and the block starts at rest, so friction holds it: } a = 0`]
+    return [...steps, { label: 'Friction wins', tex: `a \\le 0 \\text{ and the block starts at rest, so friction holds it: } a = 0` }]
   }
   if (spec.unknown === 'acceleration') return steps
   if (!s.reachesBottom) {
-    return [...steps, `d_{stop} = \\frac{v_0^2}{2|a|} = \\frac{${fmt(v0)}^2}{2(${fmt(Math.abs(rawA))})} = ${fmt(s.stopDistance ?? 0)}\\ \\text{m} < L = ${fmt(L)}\\ \\text{m}`]
+    return [
+      ...steps,
+      {
+        label: 'It slows down and stops before the bottom',
+        tex: `d_{stop} = \\frac{v_0^2}{2|a|} = \\frac{${fmt(v0)}^2}{2(${fmt(Math.abs(rawA))})} = ${fmt(s.stopDistance ?? 0)}\\ \\text{m} < L = ${fmt(L)}\\ \\text{m}`,
+      },
+    ]
   }
-  const speedStep = `v = \\sqrt{v_0^2 + 2aL} = \\sqrt{${fmt(v0)}^2 + 2(${fmt(rawA)})(${fmt(L)})} = ${fmt(s.finalSpeed)}\\ \\text{m/s}`
+  const speedStep: Step = {
+    label: 'Speed at the bottom (v² = v₀² + 2aL)',
+    tex: `v = \\sqrt{v_0^2 + 2aL} = \\sqrt{${fmt(v0)}^2 + 2(${fmt(rawA)})(${fmt(L)})} = ${fmt(s.finalSpeed)}\\ \\text{m/s}`,
+  }
   if (spec.unknown === 'finalSpeed') return [...steps, speedStep]
-  const timeStep =
+  const timeStep: Step =
     Math.abs(rawA) < 1e-12
-      ? `t = \\frac{L}{v_0} = \\frac{${fmt(L)}}{${fmt(v0)}} = ${fmt(s.timeToBottom ?? 0)}\\ \\text{s}`
-      : `t = \\frac{v - v_0}{a} = \\frac{${fmt(s.finalSpeed)} - ${fmt(v0)}}{${fmt(rawA)}} = ${fmt(s.timeToBottom ?? 0)}\\ \\text{s}`
+      ? { label: 'Constant speed, so time = distance ÷ speed', tex: `t = \\frac{L}{v_0} = \\frac{${fmt(L)}}{${fmt(v0)}} = ${fmt(s.timeToBottom ?? 0)}\\ \\text{s}` }
+      : {
+          label: 'Time from the change in speed',
+          tex: `t = \\frac{v - v_0}{a} = \\frac{${fmt(s.finalSpeed)} - ${fmt(v0)}}{${fmt(rawA)}} = ${fmt(s.timeToBottom ?? 0)}\\ \\text{s}`,
+        }
   return [...steps, speedStep, timeStep]
 }
 
-/** Worked solution as LaTeX lines, with the student's numbers substituted. */
-export function workedSteps(spec: SupportedSpec): string[] {
+/** One line of the worked solution: a plain-English label and the LaTeX working. */
+export interface Step {
+  label: string
+  tex: string
+}
+
+/** Worked solution with the student's numbers substituted. */
+export function workedSteps(spec: SupportedSpec): Step[] {
   return spec.type === 'projectile' ? projectileSteps(spec) : inclineSteps(spec)
 }

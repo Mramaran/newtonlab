@@ -60,7 +60,8 @@ export function SolutionPanel({ spec, revealed, textbook, original, onTryAngle }
       <ol className="steps">
         {steps.map((s, i) => (
           <li key={i}>
-            <Tex tex={s} block />
+            <span className="step-label">{s.label}</span>
+            <Tex tex={s.tex} block />
           </li>
         ))}
       </ol>

@@ -3,7 +3,26 @@ import { projectilePosition, solveProjectile } from '../physics/projectile'
 import { fmt } from '../physics/solution'
 import type { InclineSpec, ProjectileSpec, SupportedSpec } from '../physics/spec'
 
-export const COLORS = {
+export interface Palette {
+  bg: string
+  grid: string
+  axis: string
+  ground: string
+  path: string
+  ghost: string
+  text: string
+  muted: string
+  slope: string
+  block: string
+  gravity: string
+  normal: string
+  friction: string
+  pill: string
+  vx: string
+  vy: string
+}
+
+export const DEFAULT_PALETTE: Palette = {
   bg: '#fbfaf5',
   grid: '#ebe6d8',
   axis: '#8b8574',
@@ -17,9 +36,25 @@ export const COLORS = {
   gravity: '#6c5ce7',
   normal: '#0f9d6e',
   friction: '#e4572e',
+  pill: '#2a2925',
+  vx: '#1971c2',
+  vy: '#2b8a3e',
+}
+
+/** Canvas colours come from the --sim-* CSS variables so the simulation follows light and dark mode. */
+export function readPalette(): Palette {
+  if (typeof document === 'undefined') return DEFAULT_PALETTE
+  const cs = getComputedStyle(document.documentElement)
+  const out = { ...DEFAULT_PALETTE }
+  for (const key of Object.keys(out) as (keyof Palette)[]) {
+    const v = cs.getPropertyValue(`--sim-${key}`).trim()
+    if (v) out[key] = v
+  }
+  return out
 }
 
 const FONT = '500 13px "JetBrains Mono", ui-monospace, monospace'
+const SMALL_FONT = '500 11px "JetBrains Mono", ui-monospace, monospace'
 const LABEL_FONT = '600 14px "Inter", system-ui, sans-serif'
 
 export interface DrawOptions {
@@ -30,6 +65,11 @@ export interface DrawOptions {
   showMarkers: boolean
   /** previous parameters, drawn faintly for comparison */
   ghost?: SupportedSpec | null
+  /** draw the horizontal and vertical velocity components (projectile only) */
+  showComponents?: boolean
+  palette?: Palette
+  /** narrow screens: smaller readout split over two lines */
+  compact?: boolean
 }
 
 /** Real-world duration of the motion, s. */
@@ -37,12 +77,20 @@ export function motionDuration(spec: SupportedSpec): number {
   return spec.type === 'projectile' ? solveProjectile(spec).timeOfFlight : solveIncline(spec).duration
 }
 
+/** Time between strobe dots: a round number giving roughly a dozen dots over the motion. */
+export function strobeStep(duration: number): number {
+  if (duration <= 0) return 0
+  const target = duration / 12
+  return [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20].find((c) => c >= target) ?? 50
+}
+
 export function drawScene(ctx: CanvasRenderingContext2D, w: number, h: number, spec: SupportedSpec, o: DrawOptions) {
+  const c = o.palette ?? DEFAULT_PALETTE
   ctx.clearRect(0, 0, w, h)
-  ctx.fillStyle = COLORS.bg
+  ctx.fillStyle = c.bg
   ctx.fillRect(0, 0, w, h)
-  if (spec.type === 'projectile') drawProjectile(ctx, w, h, spec, o)
-  else drawIncline(ctx, w, h, spec, o)
+  if (spec.type === 'projectile') drawProjectile(ctx, w, h, spec, o, c)
+  else drawIncline(ctx, w, h, spec, o, c)
 }
 
 function niceStep(span: number): number {
@@ -52,17 +100,19 @@ function niceStep(span: number): number {
   return (n < 1.5 ? 1 : n < 3.5 ? 2 : n < 7.5 ? 5 : 10) * pow
 }
 
-function arrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color: string, label?: string) {
+function arrow(ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color: string, label?: string, dashed = false) {
   const len = Math.hypot(x2 - x1, y2 - y1)
   if (len < 4) return
   const ang = Math.atan2(y2 - y1, x2 - x1)
   ctx.strokeStyle = color
   ctx.fillStyle = color
   ctx.lineWidth = 2.5
+  if (dashed) ctx.setLineDash([5, 4])
   ctx.beginPath()
   ctx.moveTo(x1, y1)
   ctx.lineTo(x2, y2)
   ctx.stroke()
+  ctx.setLineDash([])
   ctx.beginPath()
   ctx.moveTo(x2, y2)
   ctx.lineTo(x2 - 10 * Math.cos(ang - 0.4), y2 - 10 * Math.sin(ang - 0.4))
@@ -88,14 +138,31 @@ function pill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number,
   ctx.fillText(text, px + 8, y + 5)
 }
 
-function readout(ctx: CanvasRenderingContext2D, x: number, y: number, parts: string[]) {
-  ctx.font = FONT
-  ctx.fillStyle = COLORS.muted
-  ctx.fillText(parts.join('   '), x, y)
+/** Live values at the top of the canvas; split over two lines on narrow screens. */
+function readout(ctx: CanvasRenderingContext2D, x: number, parts: string[], c: Palette, compact?: boolean) {
+  ctx.fillStyle = c.muted
+  if (compact) {
+    ctx.font = SMALL_FONT
+    ctx.fillText(parts.slice(0, 2).join('   '), x, 18)
+    ctx.fillText(parts.slice(2).join('   '), x, 34)
+  } else {
+    ctx.font = FONT
+    ctx.fillText(parts.join('   '), x, 22)
+  }
 }
 
-function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spec: ProjectileSpec, o: DrawOptions) {
-  const pad = { l: 64, r: 28, t: 40, b: 56 }
+function strobeDot(ctx: CanvasRenderingContext2D, x: number, y: number, c: Palette) {
+  ctx.fillStyle = c.bg
+  ctx.strokeStyle = c.path
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.arc(x, y, 4, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.stroke()
+}
+
+function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spec: ProjectileSpec, o: DrawOptions, c: Palette) {
+  const pad = { l: o.compact ? 44 : 64, r: o.compact ? 16 : 28, t: o.compact ? 52 : 40, b: 56 }
   const sol = solveProjectile(spec)
   const ghost = o.ghost?.type === 'projectile' ? o.ghost : null
   const gsol = ghost ? solveProjectile(ghost) : null
@@ -115,37 +182,37 @@ function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spe
   const visY = plotH / s
   const step = niceStep(Math.max(visX, visY))
   ctx.lineWidth = 1
-  ctx.font = FONT
+  ctx.font = o.compact ? SMALL_FONT : FONT
   for (let gx = 0; gx <= visX + 1e-9; gx += step) {
-    ctx.strokeStyle = COLORS.grid
+    ctx.strokeStyle = c.grid
     ctx.beginPath()
     ctx.moveTo(X(gx), Y(0))
     ctx.lineTo(X(gx), Y(visY))
     ctx.stroke()
-    ctx.fillStyle = COLORS.axis
+    ctx.fillStyle = c.axis
     ctx.fillText(fmt(gx), X(gx) - 6, oy + 18)
   }
   for (let gy = step; gy <= visY + 1e-9; gy += step) {
-    ctx.strokeStyle = COLORS.grid
+    ctx.strokeStyle = c.grid
     ctx.beginPath()
     ctx.moveTo(X(0), Y(gy))
     ctx.lineTo(X(visX), Y(gy))
     ctx.stroke()
-    ctx.fillStyle = COLORS.axis
+    ctx.fillStyle = c.axis
     ctx.fillText(fmt(gy), ox - 22 - 7 * (fmt(gy).length - 1), Y(gy) + 4)
   }
   ctx.fillText('m', w - pad.r - 8, oy + 18)
 
   // Ground and launch tower
-  ctx.strokeStyle = COLORS.ground
+  ctx.strokeStyle = c.ground
   ctx.lineWidth = 3
   ctx.beginPath()
   ctx.moveTo(ox - 40, oy)
   ctx.lineTo(w - pad.r + 10, oy)
   ctx.stroke()
   if (spec.height > 0) {
-    ctx.fillStyle = COLORS.slope
-    ctx.strokeStyle = COLORS.ground
+    ctx.fillStyle = c.slope
+    ctx.strokeStyle = c.ground
     ctx.lineWidth = 2
     ctx.fillRect(X(0) - 16, Y(spec.height), 16, spec.height * s)
     ctx.strokeRect(X(0) - 16, Y(spec.height), 16, spec.height * s)
@@ -153,7 +220,7 @@ function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spe
 
   // Previous path for comparison
   if (ghost && gsol) {
-    ctx.strokeStyle = COLORS.ghost
+    ctx.strokeStyle = c.ghost
     ctx.lineWidth = 2
     ctx.setLineDash([6, 6])
     ctx.beginPath()
@@ -169,12 +236,12 @@ function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spe
   // Launch angle arc
   const theta = (spec.angleDeg * Math.PI) / 180
   if (spec.angleDeg > 0.5) {
-    ctx.strokeStyle = COLORS.muted
+    ctx.strokeStyle = c.muted
     ctx.lineWidth = 1.5
     ctx.beginPath()
     ctx.arc(X(0), Y(spec.height), 34, -theta, 0)
     ctx.stroke()
-    ctx.fillStyle = COLORS.muted
+    ctx.fillStyle = c.muted
     ctx.font = LABEL_FONT
     ctx.fillText(`${fmt(spec.angleDeg)}°`, X(0) + 40, Y(spec.height) - 8)
   }
@@ -182,7 +249,7 @@ function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spe
   // Trail up to time t
   const t = Math.min(o.t, sol.timeOfFlight)
   const n = Math.max(2, Math.ceil((160 * t) / Math.max(sol.timeOfFlight, 1e-6)))
-  ctx.strokeStyle = COLORS.path
+  ctx.strokeStyle = c.path
   ctx.lineWidth = 3
   ctx.beginPath()
   for (let i = 0; i <= n; i++) {
@@ -192,41 +259,57 @@ function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spe
   }
   ctx.stroke()
 
-  // Ball and velocity arrow
+  // Strobe dots at equal time steps: spacing shows where the ball is fast or slow
+  const dt = strobeStep(sol.timeOfFlight)
+  for (let k = 1; dt > 0 && k * dt < t - 1e-9; k++) {
+    const p = projectilePosition(spec, k * dt)
+    strobeDot(ctx, X(p.x), Y(p.y), c)
+  }
+
+  // Ball and velocity arrows
   const pos = projectilePosition(spec, t)
   const vyNow = sol.vy - spec.g * t
+  const bx = X(pos.x)
+  const by = Y(Math.max(pos.y, 0))
   if (!o.finished) {
     const k = Math.min(3, 80 / Math.max(spec.speed, 1))
-    arrow(ctx, X(pos.x), Y(pos.y), X(pos.x) + sol.vx * k, Y(pos.y) - vyNow * k, COLORS.gravity, 'v')
+    if (o.showComponents) {
+      arrow(ctx, bx, by, bx + sol.vx * k, by, c.vx, 'vx', true)
+      arrow(ctx, bx, by, bx, by - vyNow * k, c.vy, 'vy', true)
+    }
+    arrow(ctx, bx, by, bx + sol.vx * k, by - vyNow * k, c.gravity, 'v')
   }
-  ctx.fillStyle = COLORS.path
+  ctx.fillStyle = c.path
   ctx.beginPath()
-  ctx.arc(X(pos.x), Y(Math.max(pos.y, 0)), 8, 0, Math.PI * 2)
+  ctx.arc(bx, by, 8, 0, Math.PI * 2)
   ctx.fill()
-  ctx.strokeStyle = '#fff'
+  ctx.strokeStyle = c.bg
   ctx.lineWidth = 2
   ctx.stroke()
 
-  readout(ctx, pad.l, 22, [`t = ${fmt(t)} s`, `x = ${fmt(pos.x)} m`, `y = ${fmt(Math.max(pos.y, 0))} m`, `v = ${fmt(Math.hypot(sol.vx, vyNow))} m/s`])
+  const parts = [`t = ${fmt(t)} s`, `x = ${fmt(pos.x)} m`, `y = ${fmt(Math.max(pos.y, 0))} m`, `v = ${fmt(Math.hypot(sol.vx, vyNow))} m/s`]
+  if (o.showComponents) parts.push(`vx = ${fmt(sol.vx)}`, `vy = ${fmt(vyNow)} m/s`)
+  // On narrow screens the component values are already labelled on the arrows.
+  readout(ctx, pad.l, o.compact ? parts.slice(0, 4) : parts, c, o.compact)
 
   if (o.finished && o.showMarkers) {
     // Range bracket under the ground
-    const by = oy + 36
-    ctx.strokeStyle = COLORS.path
+    const ry = oy + 36
+    ctx.strokeStyle = c.path
     ctx.lineWidth = 2
     ctx.beginPath()
-    ctx.moveTo(X(0), by - 6)
-    ctx.lineTo(X(0), by + 6)
-    ctx.moveTo(X(0), by)
-    ctx.lineTo(X(sol.range), by)
-    ctx.moveTo(X(sol.range), by - 6)
-    ctx.lineTo(X(sol.range), by + 6)
+    ctx.moveTo(X(0), ry - 6)
+    ctx.lineTo(X(0), ry + 6)
+    ctx.moveTo(X(0), ry)
+    ctx.lineTo(X(sol.range), ry)
+    ctx.moveTo(X(sol.range), ry - 6)
+    ctx.lineTo(X(sol.range), ry + 6)
     ctx.stroke()
-    pill(ctx, `R = ${fmt(sol.range)} m`, (X(0) + X(sol.range)) / 2, by, COLORS.path)
+    pill(ctx, `R = ${fmt(sol.range)} m`, (X(0) + X(sol.range)) / 2, ry, c.path)
     // Peak height
     if (sol.vy > 0.01) {
       const px = sol.vx * sol.timeToPeak
-      ctx.strokeStyle = COLORS.muted
+      ctx.strokeStyle = c.muted
       ctx.setLineDash([4, 5])
       ctx.lineWidth = 1.5
       ctx.beginPath()
@@ -234,13 +317,13 @@ function drawProjectile(ctx: CanvasRenderingContext2D, w: number, h: number, spe
       ctx.lineTo(X(px), Y(sol.maxHeight))
       ctx.stroke()
       ctx.setLineDash([])
-      pill(ctx, `H = ${fmt(sol.maxHeight)} m`, X(px), Y(sol.maxHeight) - 18, COLORS.text)
+      pill(ctx, `H = ${fmt(sol.maxHeight)} m`, X(px), Y(sol.maxHeight) - 18, c.pill)
     }
   }
 }
 
-function drawIncline(ctx: CanvasRenderingContext2D, w: number, h: number, spec: InclineSpec, o: DrawOptions) {
-  const pad = { l: 48, r: 48, t: 56, b: 48 }
+function drawIncline(ctx: CanvasRenderingContext2D, w: number, h: number, spec: InclineSpec, o: DrawOptions, c: Palette) {
+  const pad = { l: o.compact ? 20 : 48, r: o.compact ? 20 : 48, t: o.compact ? 64 : 56, b: 48 }
   const sol = solveIncline(spec)
   const theta = (spec.angleDeg * Math.PI) / 180
   const run = spec.length * Math.cos(theta)
@@ -254,20 +337,20 @@ function drawIncline(ctx: CanvasRenderingContext2D, w: number, h: number, spec: 
   const B = { x: x0 + triW, y: yBase }
 
   // Ground and slope
-  ctx.strokeStyle = COLORS.ground
+  ctx.strokeStyle = c.ground
   ctx.lineWidth = 3
   ctx.beginPath()
-  ctx.moveTo(16, yBase)
-  ctx.lineTo(w - 16, yBase)
+  ctx.moveTo(8, yBase)
+  ctx.lineTo(w - 8, yBase)
   ctx.stroke()
-  ctx.fillStyle = COLORS.slope
+  ctx.fillStyle = c.slope
   ctx.beginPath()
   ctx.moveTo(A.x, A.y)
   ctx.lineTo(B.x, B.y)
   ctx.lineTo(x0, yBase)
   ctx.closePath()
   ctx.fill()
-  ctx.strokeStyle = COLORS.ground
+  ctx.strokeStyle = c.ground
   ctx.lineWidth = 3
   ctx.beginPath()
   ctx.moveTo(A.x, A.y)
@@ -275,32 +358,43 @@ function drawIncline(ctx: CanvasRenderingContext2D, w: number, h: number, spec: 
   ctx.stroke()
 
   // Angle arc at the bottom of the slope
-  ctx.strokeStyle = COLORS.muted
+  ctx.strokeStyle = c.muted
   ctx.lineWidth = 1.5
   ctx.beginPath()
   ctx.arc(B.x, B.y, 44, Math.PI + 0.001, Math.PI + theta)
   ctx.stroke()
-  ctx.fillStyle = COLORS.muted
+  ctx.fillStyle = c.muted
   ctx.font = LABEL_FONT
   ctx.fillText(`${fmt(spec.angleDeg)}°`, B.x - 88, B.y - 10)
-  ctx.font = FONT
+  ctx.font = o.compact ? SMALL_FONT : FONT
   ctx.fillText(`L = ${fmt(spec.length)} m`, (A.x + B.x) / 2 + 14 * Math.sin(theta) + 8, (A.y + B.y) / 2 - 14 * Math.cos(theta) - 8)
 
-  // Block position along the slope
-  const t = Math.min(o.t, sol.duration)
-  const d = inclinePosition(spec, t)
+  // Block geometry along the slope
   const size = 40
   const slopePx = Math.hypot(triW, triH)
-  const along = size / 2 + (d / spec.length) * Math.max(slopePx - size, 0)
   const dir = { x: Math.cos(theta), y: Math.sin(theta) }
   const normal = { x: Math.sin(theta), y: -Math.cos(theta) }
-  const cx = A.x + dir.x * along + (normal.x * size) / 2
-  const cy = A.y + dir.y * along + (normal.y * size) / 2
+  /** Point at distance d down the slope, raised `lift` px off the surface. */
+  const pointAt = (d: number, lift: number) => {
+    const along = size / 2 + (d / spec.length) * Math.max(slopePx - size, 0)
+    return { x: A.x + dir.x * along + normal.x * lift, y: A.y + dir.y * along + normal.y * lift }
+  }
 
+  const t = Math.min(o.t, sol.duration)
+  const d = inclinePosition(spec, t)
+
+  // Strobe dots at equal time steps: the gaps grow as the block speeds up
+  const dt = strobeStep(sol.duration)
+  for (let k = 1; dt > 0 && k * dt < t - 1e-9; k++) {
+    const p = pointAt(inclinePosition(spec, k * dt), 7)
+    strobeDot(ctx, p.x, p.y, c)
+  }
+
+  const { x: cx, y: cy } = pointAt(d, size / 2)
   ctx.save()
   ctx.translate(cx, cy)
   ctx.rotate(theta)
-  ctx.fillStyle = COLORS.block
+  ctx.fillStyle = c.block
   ctx.beginPath()
   ctx.roundRect(-size / 2, -size / 2, size, size, 5)
   ctx.fill()
@@ -311,22 +405,22 @@ function drawIncline(ctx: CanvasRenderingContext2D, w: number, h: number, spec: 
   ctx.textAlign = 'start'
   ctx.restore()
 
-  // Free-body arrows, scaled so the weight is 70 px long
-  const k = 70 / (spec.mass * spec.g)
-  arrow(ctx, cx, cy, cx, cy + spec.mass * spec.g * k, COLORS.gravity, 'mg')
-  arrow(ctx, cx, cy, cx + normal.x * sol.normal * k, cy + normal.y * sol.normal * k, COLORS.normal, 'N')
+  // Free-body arrows, scaled so the weight arrow fits below the block (shorter on narrow screens)
+  const k = (o.compact ? 40 : 70) / (spec.mass * spec.g)
+  arrow(ctx, cx, cy, cx, cy + spec.mass * spec.g * k, c.gravity, 'mg')
+  arrow(ctx, cx, cy, cx + normal.x * sol.normal * k, cy + normal.y * sol.normal * k, c.normal, 'N')
   // At rest, static friction balances the slope component of gravity.
   const frictionShown = sol.stopDistance === 0 ? sol.gravityAlong : sol.friction
   if (frictionShown > 0.001) {
-    arrow(ctx, cx, cy, cx - dir.x * frictionShown * k, cy - dir.y * frictionShown * k, COLORS.friction, 'f')
+    arrow(ctx, cx, cy, cx - dir.x * frictionShown * k, cy - dir.y * frictionShown * k, c.friction, 'f')
   }
 
   const vNow = sol.stopDistance === 0 ? 0 : Math.max(spec.initialSpeed + sol.acceleration * t, 0)
-  readout(ctx, pad.l, 26, [`t = ${fmt(t)} s`, `d = ${fmt(d)} m`, `v = ${fmt(vNow)} m/s`, `a = ${fmt(sol.acceleration)} m/s²`])
+  readout(ctx, o.compact ? 12 : pad.l, [`t = ${fmt(t)} s`, `d = ${fmt(d)} m`, `v = ${fmt(vNow)} m/s`, `a = ${fmt(sol.acceleration)} m/s²`], c, o.compact)
 
   if (o.finished && o.showMarkers) {
-    if (sol.reachesBottom) pill(ctx, `v = ${fmt(sol.finalSpeed)} m/s at the bottom`, B.x - 80, B.y + 26, COLORS.block)
-    else if (sol.stopDistance === 0) pill(ctx, 'Friction holds it still', cx, cy - 44, COLORS.text)
-    else pill(ctx, `Stops after ${fmt(sol.stopDistance ?? 0)} m`, cx, cy - 44, COLORS.text)
+    if (sol.reachesBottom) pill(ctx, `v = ${fmt(sol.finalSpeed)} m/s at the bottom`, cx - 60, cy - 56, c.block)
+    else if (sol.stopDistance === 0) pill(ctx, 'Friction holds it still', cx, cy - 44, c.pill)
+    else pill(ctx, `Stops after ${fmt(sol.stopDistance ?? 0)} m`, cx, cy - 44, c.pill)
   }
 }

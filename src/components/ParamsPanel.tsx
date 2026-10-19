@@ -1,4 +1,5 @@
 import { fieldsFor, INCLINE_UNKNOWN_OPTIONS, PROJECTILE_UNKNOWN_OPTIONS } from '../fields'
+import { FIELD_COLORS } from '../highlight'
 import type { SupportedSpec } from '../physics/spec'
 
 interface Props {
@@ -44,9 +45,11 @@ export function ParamsPanel({ spec, onChange, disabled }: Props) {
         return (
           <div className="field" key={f.key}>
             <label htmlFor={`f-${f.key}`}>
+              <span className="dot" style={{ background: FIELD_COLORS[f.key] }} aria-hidden="true" />
               <span className="sym">{f.symbol}</span> {f.label}
             </label>
             <input
+              style={{ accentColor: FIELD_COLORS[f.key] }}
               type="range"
               min={f.min}
               max={max}
