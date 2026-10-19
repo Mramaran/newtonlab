@@ -2,7 +2,7 @@
 
 **Turn a physics word problem into a simulation you can play with.**
 
-Paste a projectile or inclined-plane question from your textbook. NewtonLab reads it, builds that exact scenario as an animated simulation, shows the worked solution with your numbers substituted in, and lets you drag sliders to see how the answer changes. A "predict first" mode asks you to guess before the reveal, so you build intuition instead of copying answers.
+Paste a Class 11–12 mechanics question from your textbook: a projectile, a slope, a pulley, a collision or a spring. NewtonLab reads it, builds that exact scenario as an animated simulation, shows the worked solution with your numbers substituted in, and lets you drag sliders to see how the answer changes. A "predict first" mode asks you to guess before the reveal, so you build intuition instead of copying answers.
 
 Built for EurekaDev 2026 (Coding track, Math & Physics).
 
