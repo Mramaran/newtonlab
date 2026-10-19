@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseProblem } from './parse.ts'
+import { parseProblem } from '../api/parse.ts'
 
 function fakeFetch(status: number, body: unknown): typeof fetch {
   return (async () => new Response(JSON.stringify(body), { status })) as typeof fetch

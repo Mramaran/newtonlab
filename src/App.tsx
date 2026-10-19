@@ -106,7 +106,7 @@ export default function App() {
             Turn any physics problem into a <em>simulation you can play with.</em>
           </h1>
           <p className="lede">
-            Paste a projectile or inclined-plane question from your textbook. SimSketch reads it, builds the exact scenario, and shows the
+            Paste a projectile or inclined-plane question from your textbook. NewtonLab reads it, builds the exact scenario, and shows the
             physics working step by step.
           </p>
           <form
@@ -260,12 +260,12 @@ const fieldLabel = (spec: SupportedSpec, key: string) => fieldsFor(spec).find((f
 function Header({ onHome }: { onHome?: () => void }) {
   return (
     <header className="header">
-      <button className="brand" onClick={onHome} disabled={!onHome} aria-label="SimSketch home">
+      <button className="brand" onClick={onHome} disabled={!onHome} aria-label="NewtonLab home">
         <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
           <path d="M4 26 Q 14 2 28 26" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="2 5" />
           <circle cx="21" cy="12" r="4" fill="#e4572e" />
         </svg>
-        SimSketch
+        NewtonLab
       </button>
       {onHome && (
         <button className="btn ghost" onClick={onHome}>

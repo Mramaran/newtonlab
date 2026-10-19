@@ -57,6 +57,6 @@ export const EXAMPLES: Example[] = [
     id: 'pulley',
     title: 'Pulley (not supported)',
     text: 'Two masses of 3 kg and 5 kg hang over a frictionless pulley. Find the acceleration of the system.',
-    spec: { type: 'unsupported', reason: 'Pulley systems are not supported yet. SimSketch handles projectiles and slopes.' },
+    spec: { type: 'unsupported', reason: 'Pulley systems are not supported yet. NewtonLab handles projectiles and slopes.' },
   },
 ]
