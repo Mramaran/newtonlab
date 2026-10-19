@@ -23,22 +23,22 @@ export interface Palette {
 }
 
 export const DEFAULT_PALETTE: Palette = {
-  bg: '#fbfaf5',
-  grid: '#ebe6d8',
-  axis: '#8b8574',
-  ground: '#33312c',
-  path: '#e4572e',
-  ghost: '#9aa5b1',
-  text: '#2a2925',
-  muted: '#6f6a5c',
-  slope: '#e9e1cc',
-  block: '#2e86ab',
-  gravity: '#6c5ce7',
-  normal: '#0f9d6e',
-  friction: '#e4572e',
-  pill: '#2a2925',
-  vx: '#1971c2',
-  vy: '#2b8a3e',
+  bg: '#fbf8f0',
+  grid: '#dce6ee',
+  axis: '#7a8594',
+  ground: '#2b3440',
+  path: '#b84a33',
+  ghost: '#a3adb8',
+  text: '#1f2a37',
+  muted: '#5e6573',
+  slope: '#ebe2cd',
+  block: '#3a6ea5',
+  gravity: '#7a4e86',
+  normal: '#3f7550',
+  friction: '#b84a33',
+  pill: '#1f2a37',
+  vx: '#3a6ea5',
+  vy: '#3f7550',
 }
 
 /** Canvas colours come from the --sim-* CSS variables so the simulation follows light and dark mode. */
@@ -55,7 +55,7 @@ export function readPalette(): Palette {
 
 const FONT = '500 13px "JetBrains Mono", ui-monospace, monospace'
 const SMALL_FONT = '500 11px "JetBrains Mono", ui-monospace, monospace'
-const LABEL_FONT = '600 14px "Inter", system-ui, sans-serif'
+const LABEL_FONT = '700 14px "Atkinson Hyperlegible", system-ui, sans-serif'
 
 export interface DrawOptions {
   /** simulation time, s */
@@ -399,7 +399,7 @@ function drawIncline(ctx: CanvasRenderingContext2D, w: number, h: number, spec: 
   ctx.roundRect(-size / 2, -size / 2, size, size, 5)
   ctx.fill()
   ctx.fillStyle = '#fff'
-  ctx.font = '600 11px "Inter", system-ui, sans-serif'
+  ctx.font = '700 11px "Atkinson Hyperlegible", system-ui, sans-serif'
   ctx.textAlign = 'center'
   ctx.fillText(`${fmt(spec.mass)} kg`, 0, 4)
   ctx.textAlign = 'start'

@@ -103,8 +103,9 @@ export default function App() {
       <div className="page">
         <Header />
         <main className="home">
+          <span className="eyebrow">For high-school physics · projectiles and slopes</span>
           <h1>
-            Turn any physics problem into a <em>simulation you can play with.</em>
+            Turn any physics problem into a <em>simulation you can <span className="scribble">play with.</span></em>
           </h1>
           <p className="lede">
             Paste a projectile or inclined-plane question from your textbook. NewtonLab reads it, builds the exact scenario, and shows the
@@ -153,6 +154,7 @@ export default function App() {
                   load(ex.spec, ex.text, ex)
                 }}
               >
+                <ExampleKind type={ex.spec.type} />
                 <span className="example-title">{ex.title}</span>
                 <span className="example-text">{ex.text}</span>
               </button>
@@ -256,15 +258,49 @@ export default function App() {
   )
 }
 
-const fieldLabel = (spec: SupportedSpec, key: string) => fieldsFor(spec).find((f) => f.key === key)?.label
+/** Small label on each example card: what kind of problem it is. */
+function ExampleKind({ type }: { type: ProblemSpec['type'] }) {
+  const common = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, 'aria-hidden': true }
+  if (type === 'projectile')
+    return (
+      <span className="example-kind">
+        <svg {...common}>
+          <path d="M3 20 Q 10 2 21 20" strokeDasharray="2 3.5" />
+          <circle cx="15" cy="9" r="2.2" fill="currentColor" stroke="none" />
+        </svg>
+        Projectile
+      </span>
+    )
+  if (type === 'incline')
+    return (
+      <span className="example-kind slope">
+        <svg {...common} strokeLinejoin="round">
+          <path d="M3 20 L21 20 L3 7 Z" />
+          <rect x="8" y="8.5" width="4.5" height="4.5" transform="rotate(36 10 11)" fill="currentColor" stroke="none" />
+        </svg>
+        Inclined plane
+      </span>
+    )
+  return (
+    <span className="example-kind unsupported">
+      <svg {...common}>
+        <circle cx="12" cy="12" r="8.5" />
+        <path d="M6 18 L18 6" />
+      </svg>
+      Not supported yet
+    </span>
+  )
+}
+
+const fieldLabel =(spec: SupportedSpec, key: string) => fieldsFor(spec).find((f) => f.key === key)?.label
 
 function Header({ onHome }: { onHome?: () => void }) {
   return (
     <header className="header">
       <button className="brand" onClick={onHome} disabled={!onHome} aria-label="NewtonLab home">
-        <svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+        <svg className="brand-mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
           <path d="M4 26 Q 14 2 28 26" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="2 5" />
-          <circle cx="21" cy="12" r="4" fill="#e4572e" />
+          <circle cx="21" cy="12" r="4" />
         </svg>
         NewtonLab
       </button>
