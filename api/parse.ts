@@ -99,7 +99,7 @@ interface ParseOptions {
 export async function parseProblem(text: unknown, opts: ParseOptions): Promise<ParseResult> {
   if (typeof text !== 'string' || text.trim() === '') return { ok: false, status: 400, error: 'Please enter a problem.' }
   if (text.length > MAX_TEXT_LENGTH) return { ok: false, status: 400, error: 'That problem is too long (max 2000 characters).' }
-  if (!opts.apiKey) return { ok: false, status: 503, error: 'The AI parser is not configured. Try one of the example problems.' }
+  if (!opts.apiKey) return { ok: false, status: 503, error: 'The AI parser is not configured (the server has no GEMINI_API_KEY). Try one of the example problems.' }
 
   const model = opts.model || DEFAULT_MODEL
   const fallbackModel = opts.fallbackModel || DEFAULT_FALLBACK_MODEL

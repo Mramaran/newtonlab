@@ -4,6 +4,8 @@
   "name": "newtonlab",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-01",
+  // Keep variables set in the dashboard; without this, every deploy deletes plain-text ones.
+  "keep_vars": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
