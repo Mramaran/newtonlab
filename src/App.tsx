@@ -355,7 +355,7 @@ function Header({ onHome }: { onHome?: () => void }) {
       <div className="header-actions">
         {onHome && (
           <button className="btn ghost" onClick={onHome}>
-            ← New problem
+            ← New<span className="wide-only"> problem</span>
           </button>
         )}
         <ThemeToggle />

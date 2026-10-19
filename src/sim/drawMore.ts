@@ -65,7 +65,8 @@ export function drawPulley(ctx: CanvasRenderingContext2D, w: number, h: number, 
   const v = sol.acceleration * t
 
   if (spec.setup === 'atwood') {
-    const r = 30
+    // Wheel wide enough that the two hanging boxes never overlap
+    const r = Math.max(30, (s1 + s2) / 4 + 8)
     const cx = w / 2
     const ceilingY = 50
     const cy = ceilingY + 40
@@ -89,12 +90,14 @@ export function drawPulley(ctx: CanvasRenderingContext2D, w: number, h: number, 
     box(ctx, cx - r - s1 / 2, y1, s1, c.block, `${fmt(spec.m1)} kg`)
     box(ctx, cx + r - s2 / 2, y2, s2, c.gravity, `${fmt(spec.m2)} kg`)
     // Forces on each mass: tension up, weight down
-    for (const [x, y, s, m] of [
-      [cx - r, y1, s1, spec.m1],
-      [cx + r, y2, s2, spec.m2],
+    // Tension arrows sit on the outer side of each box so they don't cross between the two masses
+    for (const [x, y, s, m, side] of [
+      [cx - r, y1, s1, spec.m1, -1],
+      [cx + r, y2, s2, spec.m2, 1],
     ] as const) {
       arrow(ctx, x, y + s + 2, x, y + s + 2 + m * spec.g * k, c.friction, 'mg')
-      arrow(ctx, x + s / 2 + 10, y + s / 2, x + s / 2 + 10, y + s / 2 - sol.tension * k, c.normal, 'T')
+      const ax = x + side * (s / 2 + 12)
+      arrow(ctx, ax, y + s / 2, ax, y + s / 2 - sol.tension * k, c.normal, 'T')
     }
   } else {
     // Block on a table, string over a corner pulley to a hanging mass

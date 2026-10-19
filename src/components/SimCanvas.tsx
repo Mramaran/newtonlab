@@ -173,7 +173,10 @@ export function SimCanvas({ spec, ghost, playId, instant, showMarkers, paused, o
               aria-label="Show the horizontal and vertical velocity components"
               onChange={(e) => setShowComponents(e.target.checked)}
             />
-            Show v<sub>x</sub>, v<sub>y</sub>
+            {/* One span, so the label's flex gap doesn't split the subscripts apart */}
+            <span>
+              Show v<sub>x</sub>, v<sub>y</sub>
+            </span>
           </label>
         )}
       </div>

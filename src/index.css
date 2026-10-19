@@ -984,6 +984,13 @@ h2 {
 }
 
 @media (max-width: 520px) {
+  /* Short header button so the logo, button and theme toggle fit on one line */
+  .wide-only {
+    display: none;
+  }
+  .header-actions .btn {
+    white-space: nowrap;
+  }
   .home {
     margin-top: 20px;
   }
