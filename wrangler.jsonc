@@ -6,6 +6,9 @@
   "compatibility_date": "2026-09-01",
   // Keep variables set in the dashboard; without this, every deploy deletes plain-text ones.
   "keep_vars": true,
+  // Run next to Google's US region. Otherwise requests run in whichever data centre is nearest the visitor,
+  // and Gemini rejects some of those with "User location is not supported".
+  "placement": { "region": "gcp:us-central1" },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
